@@ -26,4 +26,18 @@ class MsgArray
         }
         return array("code"=>$arg_code,"msg"=>$arg_msg,"data"=>$arg_data,"status"=>$arg_status);
     }
+
+    public static function getSpecialMsgArray($arg_code,$arg_msg,$arg_data,$arg_status,$countPage){
+        global $log;
+        if($arg_code!=0){
+            if($arg_status=="Error"){
+                $log->error("code:".$arg_code.",msg:".$arg_msg.",data:".json_encode($arg_data).",status:".$arg_status.",countPage:".$countPage);
+            }else{
+                $log->warn("code:".$arg_code.",msg:".$arg_msg.",data:".json_encode($arg_data).",status:".$arg_status.",countPage:".$countPage);
+            }
+        }else{
+            $log->info("code:".$arg_code.",msg:".$arg_msg.",data:".json_encode($arg_data).",status:".$arg_status.",countPage:".$countPage);
+        }
+        return array("code"=>$arg_code,"msg"=>$arg_msg,"data"=>$arg_data,"status"=>$arg_status,"countPage"=>$countPage);
+    }
 }

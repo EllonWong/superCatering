@@ -11,6 +11,7 @@ include_once dirname(__FILE__) . '/../common/dbConn.php';
 
 global $msgArray;
 global $log;
+const RowEachPage=6;
 
 $log = Log4PHP::getLogger("CateringInfoLog");
 $msgArray = new MsgArray();
@@ -30,6 +31,9 @@ function CateringInfo_Route($arg_body){
             case "CateringInfo/getCateringInfo":$rsl=getCateringInfo_func($arg_body);break;
             case "CateringInfo/collectCatering";$rsl=collectCatering_func($arg_body);break;
             case "CateringInfo/orderRecord";$rsl=orderRecord_func($arg_body);break;
+            case "CateringInfo/getCateringInfoByPageNum";$rsl=getCateringInfoByPageNum_func($arg_body);break;
+            case "CateringInfo/getAllCateringInfo":$rsl=getAllCateringInfoByPageNum_func($arg_body);break;
+
             default;break;
         }
         return $rsl;
@@ -67,8 +71,6 @@ function getAllCateringInfo_func($arg_body){
         }
 
         return $msgArray->getMsgArray(0,"获取成功",$rsl,"Success");
-
-
 
     }catch (Exception $e){
         $log->error("抛出异常:".$e->getMessage());
@@ -182,6 +184,7 @@ function orderRecord_func($arg_body){
         }
         $q_pdo->beginTransaction();
         $insertlikerelationSql="INSERT INTO  purchase_list (student_id,merchant_id,time)values (?,?,Now())";
+        $log->info($insertlikerelationSql.",".$arg_body["userId"].",".$arg_body["cateringId"]);
         $stmt = $q_pdo->prepare($insertlikerelationSql);
         $num=$stmt->execute(array($arg_body["userId"],$arg_body["cateringId"]));
         if($num<=0){
@@ -196,6 +199,126 @@ function orderRecord_func($arg_body){
     }
 }
 
+
+
+/*
+ * @param cateringid
+ * @param pageNum
+ */
+
+function getCateringInfoByPageNum_func($arg_body){
+    try{
+        global $log;
+        global $msgArray;
+        $log->info("===================getCateringInfoByPageNum_func begin=====================");
+        $log->info("传入参数：");
+        $log->info($arg_body);
+        if(!array_key_exists("cateringId",$arg_body)){
+            return $msgArray->getSpecialMsgArray(3,"传入餐厅参数不存在",[],"Warn",0);
+        }
+        if(!array_key_exists("pageNum",$arg_body)){
+            return $msgArray->getSpecialMsgArray(4,"传入页数参数不存在",[],"Warn",0);
+        }
+
+        $rsl = $msgArray->getSpecialMsgArray(1,"操作失败!",[],"Warn",0);
+        $q_pdo=connectDatabase();
+        if(null==$q_pdo){
+            return $msgArray->getSpecialMsgArray(1000,"数据库连接异常",[],"Warn",0);
+        }
+        $RowsStart=0;
+        $RowsEnd=6;
+        if($arg_body["pageNum"]<=1){
+            $RowsStart=0;
+            $RowsEnd=6;
+        }else{
+            $RowsStart=$arg_body["pageNum"]*6+1;
+            $RowsEnd=$RowsStart+6;
+        }
+
+        $getCateringInfoKey="id,phote,name,price";
+        $getCateringViewName="v_dish_merchant_list";
+        $selectCountSql="SELECT count(*) from   ".$getCateringViewName." WHERE MERCHANT_ID='".$arg_body["cateringId"]."'";
+        $log->info($selectCountSql);
+
+        $stmt= $q_pdo->query($selectCountSql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $Rows=$stmt->fetch();
+        $page=ceil((int)$Rows/RowEachPage);
+        $log->info("Page:".$page);
+        $getCateringInfoSql="SELECT ".$getCateringInfoKey." FROM  ".$getCateringViewName." WHERE MERCHANT_ID='".$arg_body["cateringId"]."' limit ".$RowsStart.",".$RowsEnd;
+        $log->info($getCateringInfoSql);
+
+        $stmt= $q_pdo->query($getCateringInfoSql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $rsl=$stmt->fetchAll();
+        if(0>=count($rsl)){
+            return $msgArray->getSpecialMsgArray(5,"获取菜色列表为空",[],"Success",0);
+        }
+        return $msgArray->getSpecialMsgArray(0,"获取成功",$rsl,"Success",$page);
+
+    }catch (Exception $e){
+        $log->error("抛出异常:".$e->getMessage());
+        return $msgArray->getSpecialMsgArray(100001,"系统异常",[],"Error",0);
+    }
+}
+
+/*
+ * @param pageNum
+ */
+function getAllCateringInfoByPageNum_func($arg_body){
+    try{
+        global $log;
+        global $msgArray;
+        $log->info("===================getAllCateringInfoByPageNum_func begin=====================");
+        $log->info("传入参数：");
+        $log->info($arg_body);
+        if(!array_key_exists("pageNum",$arg_body)){
+            return $msgArray->getSpecialMsgArray(4,"传入页数参数不存在",[],"Warn",0);
+        }
+
+        $rsl = $msgArray->getSpecialMsgArray(1,"操作失败!",[],"Warn",0);
+        $q_pdo=connectDatabase();
+        if(null==$q_pdo){
+            return $msgArray->getSpecialMsgArray(1000,"数据库连接异常",[],"Warn",0);
+        }
+        $RowsStart=0;
+        $RowsEnd=6;
+        if($arg_body["pageNum"]<=1){
+            $RowsStart=0;
+            $RowsEnd=6;
+        }else{
+            $RowsStart=($arg_body["pageNum"]-1)*6+1;
+            $RowsEnd=$RowsStart+6;
+        }
+
+        $getCateringInfoKey="ID,NAME,PHONE,URL,MARK";
+        $getCateringTableName="MERCHANT_LIST";
+
+        $selectCountSql="SELECT count(*) from ".$getCateringTableName;
+        $log->info($selectCountSql);
+        $stmt= $q_pdo->query($selectCountSql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $Rows=$stmt->fetch();
+        $log->info("Rows:".(int)$Rows["count(*)"]);
+        $page=ceil((int)$Rows["count(*)"]/RowEachPage);
+
+        $log->info("Page:".$page);
+        $getCateringInfoSql="SELECT ".$getCateringInfoKey." FROM  ".$getCateringTableName." limit ".$RowsStart.",".$RowsEnd;
+        $log->info($getCateringInfoSql);
+
+        $stmt= $q_pdo->query($getCateringInfoSql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $rsl=$stmt->fetchAll();
+        if(0>=count($rsl)){
+            return $msgArray->getSpecialMsgArray(5,"获取菜色列表为空",[],"Success",0);
+        }
+        return $msgArray->getSpecialMsgArray(0,"获取成功",$rsl,"Success",$page);
+
+    }catch (Exception $e){
+        $log->error("抛出异常:".$e->getMessage());
+        return $msgArray->getSpecialMsgArray(100001,"系统异常",[],"Error",0);
+    }
+}
 
 
 
