@@ -31,8 +31,8 @@ function CateringInfo_Route($arg_body){
             case "CateringInfo/getCateringInfo":$rsl=getCateringInfo_func($arg_body);break;
             case "CateringInfo/collectCatering";$rsl=collectCatering_func($arg_body);break;
             case "CateringInfo/orderRecord";$rsl=orderRecord_func($arg_body);break;
-            case "CateringInfo/getCateringInfoByPageNum";$rsl=getCateringInfoByPageNum_func($arg_body);break;
-            case "CateringInfo/getAllCateringInfo":$rsl=getAllCateringInfoByPageNum_func($arg_body);break;
+            case "CateringInfo/getCateringInfoByPageNum":$rsl=getCateringInfoByPageNum_func($arg_body);break;
+            case "CateringInfo/getAllCateringInfoByPageNum":$rsl=getAllCateringInfoByPageNum_func($arg_body);break;
 
             default;break;
         }
@@ -231,7 +231,7 @@ function getCateringInfoByPageNum_func($arg_body){
             $RowsStart=0;
             $RowsEnd=6;
         }else{
-            $RowsStart=$arg_body["pageNum"]*6+1;
+            $RowsStart=($arg_body["pageNum"]-1)*6;
             $RowsEnd=$RowsStart+6;
         }
 
@@ -243,7 +243,7 @@ function getCateringInfoByPageNum_func($arg_body){
         $stmt= $q_pdo->query($selectCountSql);
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
         $Rows=$stmt->fetch();
-        $page=ceil((int)$Rows/RowEachPage);
+        $page=ceil((int)$Rows["count(*)"]/RowEachPage);
         $log->info("Page:".$page);
         $getCateringInfoSql="SELECT ".$getCateringInfoKey." FROM  ".$getCateringViewName." WHERE MERCHANT_ID='".$arg_body["cateringId"]."' limit ".$RowsStart.",".$RowsEnd;
         $log->info($getCateringInfoSql);
